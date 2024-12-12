@@ -208,17 +208,18 @@ if (APPLE)
 endif ()
 
 # Create an objectlib, which can be used for creating both static and dynamic library
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/external/b-tree")
 add_library(tpccrunner_objlib OBJECT "${TPCCRUNNER_SRCS}")
 target_compile_definitions(tpccrunner_objlib PUBLIC ${TPCCRUNNER_COMPILE_DEFINITIONS})
 target_compile_options(tpccrunner_objlib PUBLIC ${TPCCRUNNER_COMPILE_OPTIONS})
 target_compile_options(tpccrunner_objlib PRIVATE ${COMMON_COMPILE_FLAGS})
 target_include_directories(tpccrunner_objlib PUBLIC ${TPCCRUNNER_INCLUDE_DIRECTORIES})
-target_link_libraries(tpccrunner_objlib PRIVATE ${TPCCRUNNER_LINK_LIBRARIES})
+target_link_libraries(tpccrunner_objlib PRIVATE ${TPCCRUNNER_LINK_LIBRARIES} dbgroup::b_tree)
 target_link_options(tpccrunner_objlib PUBLIC ${TPCCRUNNER_LINK_OPTIONS})
 
 # create static library
 add_library(tpccrunner_static STATIC $<TARGET_OBJECTS:tpccrunner_objlib>)
-target_link_libraries(tpccrunner_static PUBLIC tpccrunner_objlib)
+target_link_libraries(tpccrunner_static PUBLIC tpccrunner_objlib dbgroup::b_tree)
 set_target_properties(
   tpccrunner_static
   PROPERTIES
@@ -243,7 +244,7 @@ target_compile_definitions(${FILENAME} PUBLIC "${BENCHMARK_DEFINITION}")
 target_link_options(${FILENAME} PUBLIC "-pthread")
 target_compile_options(${FILENAME} PUBLIC "-pthread")
 target_compile_options(${FILENAME} PRIVATE ${COMMON_COMPILE_FLAGS})
-target_link_libraries(${FILENAME} tpccrunner_static)
+target_link_libraries(${FILENAME} tpccrunner_static dbgroup::b_tree)
 set_target_properties(${FILENAME} PROPERTIES CXX_EXTENTIONS OFF ENABLE_EXPORTS ON)
 set_target_properties(
   ${FILENAME}

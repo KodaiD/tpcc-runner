@@ -7,6 +7,7 @@
 #include "benchmarks/tpcc/include/config.hpp"
 #include "benchmarks/tpcc/include/tx_runner.hpp"
 #include "benchmarks/tpcc/include/tx_utils.hpp"
+#include "indexes/btree.hpp"
 #include "indexes/masstree.hpp"
 #include "protocols/common/epoch_manager.hpp"
 #include "protocols/silo/include/silo.hpp"
@@ -64,7 +65,7 @@ int main(int argc, const char* argv[]) {
 
     printf("Loading all tables with %" PRIu16 " warehouse(s)\n", num_warehouses);
 
-    using Index = MasstreeIndexes<Value>;
+    using Index = BTreeIndexes<Value>;
     using Protocol = Silo<Index>;
 
     Initializer<Index>::load_all_tables();
