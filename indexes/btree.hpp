@@ -140,7 +140,11 @@ public:
         return OK;
     }
 
-    // Result remove(TableID table_id, Key key) { return NOT_FOUND; }
+    Result remove([[maybe_unused]] TableID table_id, [[maybe_unused]] Key key) {
+        auto& bt = indexes[table_id];
+        bt.Delete(key, sizeof(Key));
+        return OK;
+    }
 
     uint64_t get_version_value([[maybe_unused]] TableID table_id, Node* node) {
         return node->GetVersion();

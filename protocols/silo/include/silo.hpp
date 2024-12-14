@@ -707,7 +707,7 @@ public:
                 store_release(rw_iter->second.val->tidword.obj, new_tw.obj);
                 GarbageCollector::collect(commit_tw.epoch, old);
                 if (rwt == ReadWriteType::DELETE) {
-                    // idx.remove(table_id, w_iter->first);
+                    idx.remove(table_id, w_iter->first);
                     GarbageCollector::collect(commit_tw.epoch, rw_iter->second.val);
                 }
             }
@@ -718,7 +718,7 @@ public:
     }
 
     void abort() {
-        // Index& idx = Index::get_index();
+        Index& idx = Index::get_index();
 
         for (TableID table_id: tables) {
             auto& w_table = ws.get_table(table_id);
@@ -734,7 +734,7 @@ public:
                     tw.latest = 0;
                     tw.lock = 0;
                     store_release(rw_iter->second.val->tidword.obj, tw.obj);
-                    // idx.remove(table_id, w_iter->first);
+                    idx.remove(table_id, w_iter->first);
                     GarbageCollector::collect(starting_epoch, rw_iter->second.val);
                 }
 
