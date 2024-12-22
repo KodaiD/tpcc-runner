@@ -445,7 +445,7 @@ public:
                 TidWord tw;
                 get_record_pointer(*val, rec, tw);
                 // Null check
-                if (!is_readable(tw)) return false;
+                if (!is_readable(tw)) continue;
                 // Place it into readwrite set
                 rw_table.emplace_hint(
                     rw_iter, std::piecewise_construct, std::forward_as_tuple(key),
@@ -509,7 +509,7 @@ public:
                 // Null check
                 if (!is_readable(tw)) {
                     MemoryAllocator::deallocate(rec);
-                    return false;
+                    continue;
                 }
                 // Place it in readwrite set
                 auto new_iter = rw_table.emplace_hint(
