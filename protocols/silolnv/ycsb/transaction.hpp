@@ -15,8 +15,7 @@ public:
     uint32_t thread_id = 0;
 
     Transaction(Worker<Protocol>& worker)
-        : thread_id(worker.get_id())
-        , protocol(std::move(worker.begin_tx())) {}
+        : thread_id(worker.get_id()), protocol(std::move(worker.begin_tx())) {}
 
     ~Transaction() {}
 
@@ -44,7 +43,7 @@ public:
         // We assume the write set does not hold the corresponding record.
         rec_ptr = reinterpret_cast<const Record*>(
             protocol->read(get_id<Record>(), rec_key.get_raw_key()));
-        return rec_ptr == nullptr ? Result::ABORT : Result::SUCCESS;
+        return Result::SUCCESS;
     }
 
     // Get record and prepare for update.
@@ -53,7 +52,7 @@ public:
         // rec_ptr points to data in writeset copied from db
         rec_ptr =
             reinterpret_cast<Record*>(protocol->update(get_id<Record>(), rec_key.get_raw_key()));
-        return rec_ptr == nullptr ? Result::ABORT : Result::SUCCESS;
+        return Result::SUCCESS;
     }
 
     template <typename Record>
@@ -68,7 +67,7 @@ public:
         // rec_ptr points to allocated record
         rec_ptr =
             reinterpret_cast<Record*>(protocol->write(get_id<Record>(), rec_key.get_raw_key()));
-        return rec_ptr == nullptr ? Result::ABORT : Result::SUCCESS;
+        return Result::SUCCESS;
     }
 
     template <typename Record>
