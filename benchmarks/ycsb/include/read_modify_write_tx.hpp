@@ -39,8 +39,7 @@ public:
             res = tx.prepare_record_for_update(p, input.key[i]);
             LOG_TRACE("res: %d", static_cast<int>(res));
             if (not_succeeded(tx, res)) return helper.kill(res);
-
-            p = new (p) Payload();  // initialize memory
+            p = nullptr;  // initialize memory
             res = tx.finish_update(p);
             LOG_TRACE("res: %d", static_cast<int>(res));
             if (not_succeeded(tx, res)) return helper.kill(res);
