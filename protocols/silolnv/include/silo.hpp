@@ -202,6 +202,7 @@ public:
     }
 
     Rec* write(TableID table_id, Key key) {
+        // Blind write
         LOG_INFO("WRITE (e: %u, t: %lu, k: %lu)", starting_epoch, table_id, key);
 
         const Schema& sch = Schema::get_schema();
@@ -219,14 +220,8 @@ public:
                 // Update if found in index
                 // Copy record and tidword from index
                 Rec* rec = MemoryAllocator::aligned_allocate(record_size);
-                TidWord tw;
-                copy_record(*val, rec, tw, record_size);
-                // Null check
-                if (!is_readable(tw)) {
-                    MemoryAllocator::deallocate(rec);
-                    return nullptr;
-                }
-                // Place it in readwrite set
+                TidWord tw;  // dummy tidword and not used
+                // Place it in readwrite set (mark insert for blind write)
                 auto new_iter = rw_table.emplace_hint(
                     rw_iter, std::piecewise_construct, std::forward_as_tuple(key),
                     std::forward_as_tuple(rec, tw, ReadWriteType::INSERT, false, val));
