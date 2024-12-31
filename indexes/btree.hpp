@@ -23,6 +23,7 @@ public:
         NOT_FOUND,
         BAD_INSERT,
         NOT_INSERTED,
+        ALREADY_INSERTED,
         NOT_DELETED,
         BAD_SCAN,
     };
@@ -48,32 +49,36 @@ public:
         }
     }
 
-    Result insert(TableID table_id, Key key, Value* val) {
+    Result insert(TableID table_id, Key key, Value* new_val, Value* old_val = nullptr) {
         auto& bt = indexes[table_id];
         NodeInfo ni;
-        auto result = bt.TryInsert(key, val, ni);
+        auto result = bt.TryInsert(key, new_val, old_val, ni);
         if (result == NodeRC::kCompleted) {
             return OK;
+        } else if (result == NodeRC::kKeyAlreadyInserted) {
+            return ALREADY_INSERTED;
         } else {
-            return NOT_INSERTED;
+            return BAD_INSERT;
         }
     }
 
-    Result insert(TableID table_id, Key key, Value* val, NodeMap& nm) {
+    Result insert(TableID table_id, Key key, Value* new_val, Value* old_val, NodeMap& nm) {
         auto& bt = indexes[table_id];
         NodeInfo ni;
-        auto result = bt.TryInsert(key, val, ni);
+        auto result = bt.TryInsert(key, new_val, old_val, ni);
         if (result == NodeRC::kCompleted) {
             if (auto itr = nm.find(std::get<0>(ni)); itr == nm.end()) {
-                return OK;
+                return OK;  // Found in node map
             } else if (itr->second != std::get<1>(ni)) {
-                return BAD_INSERT;
+                return BAD_INSERT;  // Conflict occurs
             } else {
                 itr->second = std::get<2>(ni);
-                return OK;
+                return OK;  // Update node map entry
             }
+        } else if (result == NodeRC::kKeyAlreadyInserted) {
+            return ALREADY_INSERTED;
         } else {
-            return NOT_INSERTED;
+            return BAD_INSERT;  // Conflict occurs
         }
     }
 
@@ -100,7 +105,14 @@ public:
         std::map<Key, Value*>& kv_map, NodeMap& nm) {
         NodeMap tmp_nm;
         auto& bt = indexes[table_id];
-        bt.OptimisticScan(lkey, rkey, kv_map, tmp_nm);
+        auto iter = bt.OptimisticScan(lkey, rkey);
+        while (iter) {
+            auto [key, val] = *iter;
+            kv_map.emplace(key, val);
+            ++iter;
+        }
+        iter.CopyNodeSet(tmp_nm);
+
         for (auto& [node, version]: tmp_nm) {
             if (auto itr = nm.find(node); itr == nm.end()) {
                 nm.emplace_hint(itr, node, version);
@@ -129,7 +141,14 @@ public:
         std::map<Key, Value*>& kv_map, NodeMap& nm) {
         NodeMap tmp_nm;
         auto& bt = indexes[table_id];
-        bt.OptimisticScan(lkey, rkey, kv_map, tmp_nm);
+        auto iter = bt.OptimisticScan(lkey, rkey);
+        while (iter) {
+            auto [key, val] = *iter;
+            kv_map.emplace(key, val);
+            ++iter;
+        }
+        iter.CopyNodeSet(tmp_nm);
+
         for (auto& [node, version]: tmp_nm) {
             if (auto itr = nm.find(node); itr == nm.end()) {
                 nm.emplace_hint(itr, node, version);

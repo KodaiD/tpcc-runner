@@ -81,7 +81,6 @@ public:
 
         const Schema& sch = Schema::get_schema();
         Index& idx = Index::get_index();
-
         tables.insert(table_id);
         size_t record_size = sch.get_record_size(table_id);
         auto& rw_table = rws.get_table(table_id);
@@ -89,34 +88,31 @@ public:
         auto& nm = ns.get_nodemap(table_id);
 
         if (rw_iter == rw_table.end()) {
-            Value* val;
-            typename Index::Result res = idx.find(table_id, key, val);
-            if (res == Index::Result::OK) return nullptr;  // abort
-
+            Value* old_val = nullptr;
             Value* new_val =
                 reinterpret_cast<Value*>(MemoryAllocator::aligned_allocate(sizeof(Value)));
             new_val->rec = nullptr;
             new_val->tidword.obj = 0;
-            new_val->tidword.latest = 1;  // exist in index
+            new_val->tidword.latest = 1;  // exists in index
             new_val->tidword.absent = 1;  // cannot be seen by others
-            res = idx.insert(table_id, key, new_val, nm);
+            typename Index::Result res = idx.insert(table_id, key, new_val, old_val, nm);
 
-            if (res == Index::Result::NOT_INSERTED) {
+            if (res == Index::Result::ALREADY_INSERTED) {
                 MemoryAllocator::deallocate(new_val);
                 return nullptr;  // abort
+            } else if (res == Index::Result::BAD_INSERT) {
+                return nullptr;
+            } else {
+                assert(res == Index::Result::OK);
+                Rec* rec = MemoryAllocator::aligned_allocate(record_size);
+                auto new_iter = rw_table.emplace_hint(
+                    rw_iter, std::piecewise_construct, std::forward_as_tuple(key),
+                    std::forward_as_tuple(
+                        rec, new_val->tidword, ReadWriteType::INSERT, true, new_val));
+                auto& w_table = ws.get_table(table_id);
+                w_table.emplace_back(key, new_iter);
+                return rec;
             }
-
-            Rec* rec = MemoryAllocator::aligned_allocate(record_size);
-            auto new_iter = rw_table.emplace_hint(
-                rw_iter, std::piecewise_construct, std::forward_as_tuple(key),
-                std::forward_as_tuple(rec, new_val->tidword, ReadWriteType::INSERT, true, new_val));
-
-            auto& w_table = ws.get_table(table_id);
-            w_table.emplace_back(key, new_iter);
-
-            if (res == Index::Result::BAD_INSERT) return nullptr;
-
-            return rec;
         }
 
         auto rwt = rw_iter->second.rwt;
@@ -142,14 +138,12 @@ public:
 
         const Schema& sch = Schema::get_schema();
         Index& idx = Index::get_index();
-
         tables.insert(table_id);
         size_t record_size = sch.get_record_size(table_id);
         auto& rw_table = rws.get_table(table_id);
         auto rw_iter = rw_table.find(key);
 
         if (rw_iter == rw_table.end()) {
-            // Abort if key not found in index
             Value* val;
             typename Index::Result res = idx.find(table_id, key, val);
             if (res == Index::Result::NOT_FOUND) return nullptr;
